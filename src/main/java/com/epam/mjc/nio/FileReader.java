@@ -1,10 +1,9 @@
 package com.epam.mjc.nio;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.logging.Logger;
 
 public class FileReader {
@@ -12,49 +11,38 @@ public class FileReader {
 
     public Profile getDataFromFile(File file) {
         Profile profile = new Profile();
-        String[] fileData = readDataFromFile(file);
-
-        for (String dataLine : fileData) {
-            KeyValue keyValue = KeyValue.fromString(dataLine);
-            if (keyValue != null) {
-                switch (keyValue.getKey()) {
-                    case "name":
-                        profile.setName(keyValue.getValue());
-                        break;
-                    case "email":
-                        profile.setEmail(keyValue.getValue());
-                        break;
-                    case "phone":
-                        Long phone = Long.parseLong(keyValue.getValue());
-                        profile.setPhone(phone);
-                        break;
-                    case "age":
-                        Integer age = Integer.parseInt(keyValue.getValue());
-                        profile.setAge(age);
-                        break;
-                    default:
-                        logger.info("Unknown parameter: " + keyValue.getKey());
+        try (
+                BufferedReader bufferedReader = Files.newBufferedReader(file.toPath())
+        ) {
+            String dataLine;
+            while ((dataLine = bufferedReader.readLine()) != null) {
+                KeyValue keyValue = KeyValue.fromString(dataLine);
+                if (keyValue != null) {
+                    switch (keyValue.getKey()) {
+                        case "name":
+                            profile.setName(keyValue.getValue());
+                            break;
+                        case "email":
+                            profile.setEmail(keyValue.getValue());
+                            break;
+                        case "phone":
+                            Long phone = Long.parseLong(keyValue.getValue());
+                            profile.setPhone(phone);
+                            break;
+                        case "age":
+                            Integer age = Integer.parseInt(keyValue.getValue());
+                            profile.setAge(age);
+                            break;
+                        default:
+                            logger.info("Unknown parameter: " + keyValue.getKey());
+                    }
                 }
             }
+        } catch (IOException e) {
+            logger.info(String.format("Error on file Profile.txt processing: %s", e.getMessage()));
         }
 
         return profile;
-    }
-
-    private String[] readDataFromFile(File file) {
-        try (
-                RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
-                FileChannel channel = randomAccessFile.getChannel()
-        ) {
-            ByteBuffer buffer = ByteBuffer.allocate((int) channel.size());
-            channel.read(buffer);
-            buffer.flip();
-            String fileData = new String(buffer.array());
-            return fileData.split("\\r\\n");
-        } catch (IOException e) {
-            logger.info(e.getMessage());
-            return new String[]{};
-        }
     }
 }
 
